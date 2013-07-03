@@ -1,401 +1,79 @@
-<!doctype html>
-<html lang="en">
-
-	<head>
-		<meta charset="utf-8">
-
-		<title>audiolib.js introduction</title>
-
-		<meta name="description" content="An introductory presentation on audiolib.js">
-		<meta name="author" content="Mike Hodnick">
-
-		<meta name="apple-mobile-web-app-capable" content="yes" />
-		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-
-		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-
-		<link rel="stylesheet" href="css/reveal.min.css">
-		<link rel="stylesheet" href="css/theme/default.css" id="theme">
-		<link rel="stylesheet" href="css/style.css">
-		<link rel="stylesheet" href="lib/css/zenburn.css">
-
-		<script src="js/audiolib.min.js"></script>
-
-		<script>
-			document.write( '<link rel="stylesheet" href="css/print/' + ( window.location.search.match( /print-pdf/gi ) ? 'pdf' : 'paper' ) + '.css" type="text/css" media="print">' );
-		</script>
-
-		<!--[if lt IE 9]>
-		<script src="lib/js/html5shiv.js"></script>
-		<![endif]-->
-	</head>
-
-	<body>
-
-		<div class="reveal">
-
-			<div class="slides">
-
-				<section>
-					<h1>audiolib.js</h1>
-					<h3>audio synthesis in the browser</h3>
-					<p>
-						<small>Created by <a href="http://kindohm.com">Mike Hodnick</a> [<a href="http://github.com/kindohm">github.com/kindohm</a>]</small>
-					</p>
-				</section>
-
-				<section>
-					<h2>Why audio synthesis in the browser? *</h2>
-					<p><small>*hint: because it is freaking awesome</small></p>
-				</section>
-
-				<section>
-					<section>
-						<p>JavaScript -&gt; Audio API -&gt; Browser</p>
-					</section>
-					<section>
-						<p>JavaScript -&gt; audiolib.js -&gt; Audio API -&gt; Browser</p>
-					</section>
-				</section>
-
-				<section>
-					<section>
-						<h2>A little digital audio theory</h2>
-						<ul>
-							<li>Samples</li>
-							<li>Sample Rate</li>
-							<li>Channels</li>
-							<li>Bits Per Sample</li>
-						</ul>
-					</section>
-					<section>
-						<h2>Single-Channel Buffer</h2>
-						<br/>
-						<table class="sampleTable" cellspacing="3">
-							<tr>
-								<td class="channel0"><div>Sample #0</div></td>
-								<td class="channel0"><div>Sample #1</div></td>
-								<td class="channel0"><div>Sample #2</div></td>
-								<td class="channel0"><div>Sample #3</div></td>
-								<td class="channel0"><div>Sample #4</div></td>
-								<td class="channel0"><div>Sample #5</div></td>
-								<td class="channel0"><div>Sample #6</div></td>
-								<td><div><storng>...</strong></div></td>
-								<td class="channel0"><div>Sample #N</div></td>
-							</tr>
-						</table>
-					</section>
-					<section>
-						<h2>Two-Channel Buffer</h2>
-						<h3>a.k.a. Stereo</h3>
-						<br/>
-						<table class="sampleTable" cellspacing="3">
-							<tr>
-								<td class="channel0"><div>Sample #0 L</div></td>
-								<td class="channel1"><div>Sample #0 R</div></td>
-								<td class="channel0"><div>Sample #1 L</div></td>
-								<td class="channel1"><div>Sample #1 R</div></td>
-								<td class="channel0"><div>Sample #2 L</div></td>
-								<td class="channel1"><div>Sample #2 R</div></td>
-								<td><div><storng>...</strong></div></td>
-								<td class="channel0"><div>Sample #N L</div></td>
-								<td class="channel1"><div>Sample #N R</div></td>
-							</tr>
-						</table>
-					</section>
-					<!-- not sure if I'm using this 
-					<section>
-						<h2>Sample Pipeline</h2>
-
-						<div>
-							<span class="box">Generators (1 - n)</span> 
-							<span class="arrow">-&gt;</span> 
-							<span class="box">Effects / Processing</span>
-							<span class="arrow">-&gt;</span>
-							<span class="box">Output</span>
-						</div>
-					</section>
-					-->
-
-				</section>
-
-				<section>
-					<section>
-						<h2>Audio API's in Browsers *</h2>
-						<ul>
-							<li><a href="https://dvcs.w3.org/hg/audio/raw-file/tip/webaudio/specification.html">Web Audio API</a> (webkit)</li>
-							<li><a href="https://wiki.mozilla.org/Audio_Data_API">Audio Data API</a> (mozilla)</li>
-						</ul>
-						<br/>
-						<br/>
-						<p>* Not the same as the HTML5 &lt;audio&gt; object.</p>
-					</section>
-
-<!--
-					<section>
-						<h2>Mozilla Audio Data API Example</h2>
-						<pre><code>var audio = new Audio();
-audio.mozSetup(1, sampleRate);
-
-var currentWritePosition = 0;
-var prebufferSize = sampleRate / 2;
-var tail = null, tailPosition;
-
-setInterval(function() {
-  var written;
-  if(tail) {
-    written = audio.mozWriteAudio(tail.subarray(tailPosition));
-    currentWritePosition += written;
-    tailPosition += written;
-    if(tailPosition &lt; tail.length) {
-      return; 
-    }
-    tail = null;
-  }
-
-  var currentPosition = audio.mozCurrentSampleOffset();
-  var available = currentPosition + 
-    prebufferSize - currentWritePosition;
-  if(available &gt; 0) {
-    var soundData = new Float32Array(available);
-    readFn(soundData);
-
-    written = audio.mozWriteAudio(soundData);
-    if(written &lt; soundData.length) {
-      tail = soundData;
-      tailPosition = written;
-    }
-    currentWritePosition += written;
-  }
-}, 100);
-
-var frequency = 0, currentSoundSample;
-var sampleRate = 44100;
-
-function requestSoundData(soundData) {
-  if (!frequency) { 
-    return; // no sound selected
-  }
-
-  var k = 2* Math.PI * frequency / sampleRate;
-  for (var i=0, size=soundData.length; i&lt;size; i++) {
-    soundData[i] = Math.sin(k * currentSoundSample++);
-  }        
-}</code></pre>
-					</section>
-					<section>
-						<h2>Webkit Web Audio API Example</h2>
-						<pre><code>var context = new webkitAudioContext();
-var oscillator = context.createOscillator();
-oscillator.type = 0; // sine
-oscillator.frequency.value = 200; // hz
-oscillator.connect(context.destination);
-oscillator.noteOn &amp;&amp; oscillator.noteOn(0);</code></pre>
-					</section>
-					<section data-state="oscillator-demo">
-						<h2>audiolib.js Example</h2>
-						<pre><code>var osc, device, channels = 2;
-
-var audioCallback = function(buffer, channelCount) {
-	osc.append(buffer, channelCount);
-};
-
-device = audioLib.AudioDevice(audioCallback, channels);
-osc = audioLib.Oscillator(device.sampleRate, 200);</code></pre>
-					</section>
-				-->
-				</section>
-
-				<section>
-
-					<section>
-						<h2>Oscillators</h2>
-						<ul>
-							<li>Single and dual channel</li>
-							<li>Wave shapes</li>
-							<li>Frequency modulation</li>
-							<li>Addition and mixing</li>
-						</ul>
-					</section>
-
-					<section>
-						<h2>Single Channel Oscillator</h2>
-						<pre><code>var osc, device, channels = 1;
-
-var audioCallback = function(buffer, channelCount) {
-	osc.append(buffer, channelCount);
-};
-
-device = audioLib.AudioDevice(audioCallback, channels);
-osc = audioLib.Oscillator(device.sampleRate, 400);</code></pre>
-						<p><a href="demos/oscillator-single-channel.html" target="_blank">demo</a></p>
-					</section>
-
-					<section>
-						<h2>Multiple Channels</h2>
-						<pre><code>for (index = 0; index &lt; buffer.length; index += 2){
-
-  osc1.generate();
-  osc2.generate();
-
-  leftSample = osc1.getMix();
-  rightSample = osc2.getMix();
-
-  buffer[index] = leftSample;
-  buffer[index + 1] = rightSample;
-
-}</code></pre>
-
-						<p><a href="demos/oscillator-dual-channels.html" target="_blank">demo</a></p>
-					</section>
-
-					<section>
-
-						<h2>Wave Shapes</h2>
-
-						<ul>
-							<li>Sine</li>
-							<li>Sawtooth</li>
-							<li>Inverted Sawtooth</li>
-							<li>Square</li>
-							<li>Triangle</li>
-							<li>Pulse</li>
-						</ul>
-						<br/>
-						<br/>
-						<p><a href="demos/wave-shapes.html">demo</a></p>
-
-					</section>
-
-					<section>
-
-						<h2>Frequency Modulation</h2>
-
-						<pre><code>for (index = 0; index &lt; buffer.length; index += channels) {
-
-	lfo.generate();
-	osc.fm = lfo.getMix();
-	osc.generate();
-
-	sample = osc.getMix();
-
-	// fill buffer...
-
-}</code></pre>
-
-
-						<p><a href="demos/frequency-modulation.html" target="_blank">demo</a></p>
-
-					</section>
-
-					<section>
-						<h2>Addition and Mixing</h2>
-
-						<pre><code>for (i = 0; i &lt; oscillators.length; i++) {
-  oscillators[i].generate();
-  sample += oscillators[i].getMix() * level;
-}</code></pre>
-						<p>Only so much headroom is available.</p>
-						<p>User-controlled mixing versus computed.</p>
-						<p><a href="demos/mixing.html" target="_blank">demo</a></p>
-
-					</section>
-
-				</section>
-
-				<section>
-					<h2>Samples</h2>
-
-					<ul>
-						<li>Base64-encoded</li>
-						<li>Data islands vs. files vs. HTTP</li>
-						<li>Beware of samples &gt;~ 500 KB</li> 
-					</ul>
-					<p><a href="demos/samples.html" target="_blank">demo</a></p>
-				</section>
-
-				<section>
-					<h2>Effects and Processing</h2>
-					<pre><code>var sample = 0;
-generator.generate();
-sample = generator.getMix();
-effect.pushSample(sample);
-sample += effect.getMix();</code></pre>
-					<p><a href="demos/effects.html" target="_blank">demo</a></p>
-				</section>
-
-				<section>
-					<h2>Automation</h2>
-					<p><a href="demos/automation.html" target="_blank">demo #1</a></p>
-					<p><a href="demos/automation-manual.html" target="_blank">demo #2</a></p>
-				</section>
-
-				<section>
-					<h2>Custom Generators</h2>
-					<p><a href="demos/custom-generators.html" target="_blank">demo</a></p>
-				</section>
-
-				<section>
-					<h2>Envelopes</h2>
-					<p><img src="images/adsr.png" alt="adsr" /></p>
-					<p><a href="demos/envelopes.html" target="_blank">demo</a></p>
-				</section>
-
-				<section>
-					<h2>Sequencing</h2>
-					<ul>
-						<li>StepSequencer</li>
-						<li>roll your own</li>
-					</ul>
-					<p><a href="demos/step-sequencer.html" target="_blank">mario demo</a></p>
-				</section>
-
-				<section>
-					<h2>Fast-Fourier Transforms</h2>
-					<p><a href="demos/fft.html" target="_blank">demo 1</a></p>
-					<p><a href="demos/fft2.html" target="_blank">demo 2</a></p>
-				</section>
-
-				<section>
-					<h2>Putting it all together...</h2>
-					<ul>
-						<li>DJ Dubstep Llama</li>
-						<li>Off the Air</li>
-						<li>txt2sound</li>
-					</ul>
-				</section>
-
-				<section>
-					<h1>THE END</h1>
-					<h3>BY Mike Hodnick / kindohm.com</h3>
-				</section>
-
-			</div>
-		</div>
-
-		<script src="lib/js/head.min.js"></script>
-		<script src="js/reveal.min.js"></script>
-
-		<script>
-
-			Reveal.initialize({
-				controls: true,
-				progress: true,
-				history: true,
-				center: true,
-
-				theme: Reveal.getQueryHash().theme, // available themes are in /css/theme
-				transition: Reveal.getQueryHash().transition || 'default', 
-
-				dependencies: [
-					{ src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
-					{ src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
-					{ src: 'plugin/zoom-js/zoom.js', async: true, condition: function() { return !!document.body.classList; } },
-					// { src: 'plugin/remotes/remotes.js', async: true, condition: function() { return !!document.body.classList; } }
-				]
-			});
-
-		</script>
-
-	</body>
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset='utf-8' />
+    <meta http-equiv="X-UA-Compatible" content="chrome=1" />
+    <meta name="description" content="Audiolibjs-intro : Materials from an introductory presentation on audiolib.js" />
+
+    <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
+
+    <title>Audiolibjs-intro</title>
+  </head>
+
+  <body>
+
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+        <header class="inner">
+          <a id="forkme_banner" href="https://github.com/Mikxail/audiolibjs-intro">View on GitHub</a>
+
+          <h1 id="project_title">Audiolibjs-intro</h1>
+          <h2 id="project_tagline">Materials from an introductory presentation on audiolib.js</h2>
+
+            <section id="downloads">
+              <a class="zip_download_link" href="https://github.com/Mikxail/audiolibjs-intro/zipball/master">Download this project as a .zip file</a>
+              <a class="tar_download_link" href="https://github.com/Mikxail/audiolibjs-intro/tarball/master">Download this project as a tar.gz file</a>
+            </section>
+        </header>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer">
+      <section id="main_content" class="inner">
+        <h3>
+<a name="welcome-to-github-pages" class="anchor" href="#welcome-to-github-pages"><span class="octicon octicon-link"></span></a>Welcome to GitHub Pages.</h3>
+
+<p>This automatic page generator is the easiest way to create beautiful pages for all of your projects. Author your page content here using GitHub Flavored Markdown, select a template crafted by a designer, and publish. After your page is generated, you can check out the new branch:</p>
+
+<pre><code>$ cd your_repo_root/repo_name
+$ git fetch origin
+$ git checkout gh-pages
+</code></pre>
+
+<p>If you're using the GitHub for Mac, simply sync your repository and you'll see the new branch.</p>
+
+<h3>
+<a name="designer-templates" class="anchor" href="#designer-templates"><span class="octicon octicon-link"></span></a>Designer Templates</h3>
+
+<p>We've crafted some handsome templates for you to use. Go ahead and continue to layouts to browse through them. You can easily go back to edit your page before publishing. After publishing your page, you can revisit the page generator and switch to another theme. Your Page content will be preserved if it remained markdown format.</p>
+
+<h3>
+<a name="rather-drive-stick" class="anchor" href="#rather-drive-stick"><span class="octicon octicon-link"></span></a>Rather Drive Stick?</h3>
+
+<p>If you prefer to not use the automatic generator, push a branch named <code>gh-pages</code> to your repository to create a page manually. In addition to supporting regular HTML content, GitHub Pages support Jekyll, a simple, blog aware static site generator written by our own Tom Preston-Werner. Jekyll makes it easy to create site-wide headers and footers without having to copy them across every page. It also offers intelligent blog support and other advanced templating features.</p>
+
+<h3>
+<a name="authors-and-contributors" class="anchor" href="#authors-and-contributors"><span class="octicon octicon-link"></span></a>Authors and Contributors</h3>
+
+<p>You can <a href="https://github.com/blog/821" class="user-mention">@mention</a> a GitHub username to generate a link to their profile. The resulting <code>&lt;a&gt;</code> element will link to the contributor's GitHub Profile. For example: In 2007, Chris Wanstrath (<a href="https://github.com/defunkt" class="user-mention">@defunkt</a>), PJ Hyett (<a href="https://github.com/pjhyett" class="user-mention">@pjhyett</a>), and Tom Preston-Werner (<a href="https://github.com/mojombo" class="user-mention">@mojombo</a>) founded GitHub.</p>
+
+<h3>
+<a name="support-or-contact" class="anchor" href="#support-or-contact"><span class="octicon octicon-link"></span></a>Support or Contact</h3>
+
+<p>Having trouble with Pages? Check out the documentation at <a href="http://help.github.com/pages">http://help.github.com/pages</a> or contact <a href="mailto:support@github.com">support@github.com</a> and we’ll help you sort it out.</p>
+      </section>
+    </div>
+
+    <!-- FOOTER  -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        <p class="copyright">Audiolibjs-intro maintained by <a href="https://github.com/Mikxail">Mikxail</a></p>
+        <p>Published with <a href="http://pages.github.com">GitHub Pages</a></p>
+      </footer>
+    </div>
+
+    
+
+  </body>
 </html>
